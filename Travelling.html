@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Exam Travel - Secure Transport Portal</title>
+  <meta name="description" content="Easy and secure bus booking for students attending exams. Book your seat, get a digital pass, and travel with confidence.">
+  <meta name="keywords" content="exam travel, student transport, exam bus, secure booking">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236C5CE7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 7.6 16 5 12 5s-6.7 2.6-8.5 6.1C2.7 11.3 2 12.1 2 13v3c0 .6.4 1 1 1h2'/%3E%3Cpath d='M12 17.5V5'/%3E%3Cpath d='M2 17h20'/%3E%3Ccircle cx='7' cy='17' r='2'/%3E%3Ccircle cx='17' cy='17' r='2'/%3E%3C/svg%3E">
+  <meta name="theme-color" content="#6C5CE7" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
+<style>
+      /* Base */
+  body { 
+    font-family: 'Inter', sans-serif; 
+    background: linear-gradient(135deg, #f9fafb, #e3e7ff);
+    transition: background 0.4s ease-in-out, color 0.4s ease-in-out;
+    color: #1e1e2f;
+  }
+  body.dark { 
+    background: linear-gradient(135deg, #0f0f1a, #1c1c2d); 
+    color: #f1f1f1;
+  }
+
+  /* Card */
+  .card { 
+    background: rgba(255,255,255,0.85); 
+    border-radius: 20px; 
+    padding: 24px; 
+    backdrop-filter: blur(14px); 
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15); 
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  body.dark .card {
+    background: rgba(30,30,45,0.8);
+  }
+  .card:hover { 
+    transform: translateY(-6px); 
+    box-shadow: 0 12px 28px rgba(0,0,0,0.25); 
+  }
+
+  /* Navigation links */
+  .nav-link { 
+    padding: 12px 18px;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+  }
+  .nav-link.active { 
+    background: linear-gradient(90deg, #6C5CE7, #a29bfe); 
+    color: #fff; 
+    font-weight: 600; 
+    box-shadow: 0 4px 12px rgba(108,92,231,0.5); 
+  }
+
+/* Toast Animations */
+  .animate-slideIn {
+    animation: slideIn 0.4s ease forwards;
+  }
+  .animate-fadeOut {
+    animation: fadeOut 0.5s ease forwards;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(100%); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes fadeOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-10px); }
+  }
+
+  /* Toasts */
+  #toast-container { position: fixed; top: 20px; right: 20px; z-index: 100; }
+  .toast { 
+    padding: 14px 22px; 
+    border-radius: 12px; 
+    color: #fff; 
+    margin-bottom: 12px; 
+    font-weight: 500;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25); 
+    transform: translateX(120%); 
+    animation: slide-in 0.5s forwards, fadeout 4s forwards; 
+  }
+  .toast.success { background: linear-gradient(135deg, #28a745, #3ddc97); }
+  .toast.error   { background: linear-gradient(135deg, #dc3545, #ff6b6b); }
+  .toast.info    { background: linear-gradient(135deg, #17a2b8, #00c9ff); }
+  @keyframes slide-in { to { transform: translateX(0); } }
+  @keyframes fadeout { 0%,80%{opacity:1;} 100%{opacity:0;} }
+
+  /* Scanner */
+  #scanner-container { 
+    position: relative; 
+    width: 100%; 
+    max-width: 500px; 
+    margin: auto; 
+    overflow: hidden; 
+    border-radius: 16px; 
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  }
+  #scanner-video { width: 100%; display: block; border-radius: 16px; }
+  #scanner-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  #scanner-laser { 
+    position: absolute; top: 0; left: 0; width: 100%; height: 3px; 
+    background: linear-gradient(90deg, #ff0000, #ff5555);
+    box-shadow: 0 0 15px red; 
+    animation: scan 2s infinite linear; 
+  }
+  @keyframes scan { 0% { top: 0; } 50% { top: 99%; } 100% { top: 0; } }
+
+  /* Buttons - Premium Glow */
+  button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 14px;
+    font-weight: 600;
+    background: linear-gradient(90deg, #6C5CE7, #a29bfe);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(108,92,231,0.4);
+    cursor: pointer;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(108,92,231,0.6);
+  }
+  button:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 8px rgba(108,92,231,0.5);
+  }
+
+  /* Print */
+  @media print { #sidebar, #topbar, #modal-container { display:none !important; } }
+</style>
+
+
+</head>
+<body class="antialiased text-gray-800">
+  <div id="toast-container"></div>
+<div class="flex h-screen">
+  <aside id="sidebar" class="w-64 bg-white dark:bg-gray-900 border-r flex flex-col">
+    <div class="h-16 flex items-center justify-center border-b border-gray-200 dark:border-gray-700">
+      <h1 class="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-gray-100">
+        <i data-lucide="bus-front"></i> Exam Travel
+      </h1>
+    </div>
+    <nav id="sidebar-nav" class="p-4 space-y-2 flex-grow"></nav>
+    <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+      <button id="lang-switcher"
+        class="w-full flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200">
+        <i data-lucide="languages"></i><span data-lang-key="switch_lang">Switch to Hindi</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="flex-1 flex flex-col">
+    <header id="topbar"
+      class="h-16 flex items-center justify-between px-6 border-b bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+      <span id="header-breadcrumb" class="font-semibold text-gray-800 dark:text-gray-100">Homepage</span>
+
+      <!-- ✅ Theme Toggle Button -->
+      <button id="theme-toggle"
+        class="p-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:opacity-90 transition flex items-center gap-2 shadow-md">
+        <i id="theme-icon" data-lucide="moon"></i>
+        <span class="hidden sm:inline">Toggle Theme</span>
+      </button>
+    </header>
+
+    <main id="main-content" class="flex-1 p-6 overflow-y-auto bg-gray-50 dark:bg-gray-800"></main>
+  </div>
+
+  <div id="modal-container"
+    class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50"></div>
+</div>
+
+
+<script>
+// --- STATE & CONFIG ---
+// ✅ LocalStorage Helpers
+function saveState(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function loadState(key, defaultValue) {
+  const saved = localStorage.getItem(key);
+  return saved ? JSON.parse(saved) : defaultValue;
+}
+
+// ✅ Initial State with persistence
+const state = {
+  bookings: loadState("bookings", []),
+  isAdmin: loadState("isAdmin", false),
+  lang: loadState("lang", "en"),
+  theme: loadState("theme", "light"), // ✅ default: light
+
+  fromCity: "Chandausi",
+  pickupPoints: ["Bus Stand", "Railway Station", "Fawara Chowk"],
+
+  // ✅ Full Uttar Pradesh districts list
+  toDistricts: [
+    "Agra", "Aligarh", "Ambedkar Nagar", "Amethi", "Amroha", "Auraiya",
+    "Ayodhya", "Azamgarh", "Baghpat", "Bahraich", "Ballia", "Balrampur",
+    "Banda", "Barabanki", "Bareilly", "Basti", "Bhadohi", "Bijnor", "Budaun",
+    "Bulandshahr", "Chandauli", "Chitrakoot", "Deoria", "Etah", "Etawah",
+    "Farrukhabad", "Fatehpur", "Firozabad", "Gautam Buddha Nagar", "Ghaziabad",
+    "Ghazipur", "Gonda", "Gorakhpur", "Hamirpur", "Hapur", "Hardoi",
+    "Hathras", "Jalaun", "Jaunpur", "Jhansi", "Kannauj", "Kanpur Dehat",
+    "Kanpur Nagar", "Kasganj", "Kaushambi", "Kushinagar", "Lakhimpur Kheri",
+    "Lalitpur", "Lucknow", "Maharajganj", "Mahoba", "Mainpuri", "Mathura",
+    "Mau", "Meerut", "Mirzapur", "Moradabad", "Muzaffarnagar", "Pilibhit",
+    "Pratapgarh", "Prayagraj", "Raebareli", "Rampur", "Saharanpur",
+    "Sambhal", "Sant Kabir Nagar", "Shahjahanpur", "Shamli", "Shravasti",
+    "Siddharthnagar", "Sitapur", "Sonbhadra", "Sultanpur", "Unnao",
+    "Varanasi"
+  ],
+
+  admins: [
+    { username: "admin1", password: "1234" },
+    { username: "admin2", password: "abcd" }
+  ],
+
+  examCenterLocation: { lat: 27.1751, lon: 78.0421 }, // Taj Mahal, Agra
+  verificationRadius: 1 // in km
+};
+
+// ✅ Booking management
+function addBooking(booking) {
+  state.bookings.push(booking);
+  saveState("bookings", state.bookings);
+}
+
+// ✅ Admin status
+function setAdminStatus(status) {
+  state.isAdmin = status;
+  saveState("isAdmin", status);
+}
+
+// ✅ Language preference
+function setLanguage(lang) {
+  state.lang = lang;
+  saveState("lang", lang);
+}
+
+// ✅ Theme preference (dark / light)
+function setTheme(theme) {
+  state.theme = theme;
+  saveState("theme", theme);
+  applyTheme();
+}
+
+// ✅ Apply theme instantly
+function applyTheme() {
+  if (state.theme === "dark") {
+    document.documentElement.classList.add("dark");
+    document.body.classList.add("bg-gray-900", "text-gray-100");
+    document.body.classList.remove("bg-white", "text-gray-800");
+  } else {
+    document.documentElement.classList.remove("dark");
+    document.body.classList.add("bg-white", "text-gray-800");
+    document.body.classList.remove("bg-gray-900", "text-gray-100");
+  }
+}
+
+// ✅ Initialize theme on page load
+document.addEventListener("DOMContentLoaded", () => {
+  applyTheme();
+
+  // Example: toggle button
+  const themeToggleBtn = document.getElementById("theme-toggle");
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener("click", () => {
+      setTheme(state.theme === "dark" ? "light" : "dark");
+    });
+  }
+});
+
+
+const langStrings = {
+    en: {
+        homepage: "Homepage", new_booking: "New Booking", my_bookings: "My Bookings", admin_dashboard: "Admin Dashboard",
+        welcome_title: "Welcome to Exam Travel", welcome_subtitle: "Book travel for your exam with secure QR verification.",
+        book_now: "Book Now", from_city: "From City", to_district: "Destination District", pickup_point: "Pickup Point",
+        exam_date: "Exam Date", exam_shift: "Exam Shift", full_name: "Full Name", mobile_no: "10-digit Mobile Number",
+        payment_ref: "Payment Reference", submit: "Submit", switch_lang: "Switch to Hindi",
+        pass_title: "Exam Travel Pass", name: "Name", from_to: "From → To", pickup: "Pickup", date: "Date",
+        seat_no: "Seat No", payment: "Payment", download_pdf: "Download PDF", send_whatsapp: "Send via WhatsApp", close: "Close",
+        my_bookings_info: "Your bookings are saved in this browser. If you book using a different device, they won't appear here.",
+        no_bookings: "You have no bookings yet.",
+        admin_login: "Admin Login", username: "Username", password: "Password", login: "Login",
+        total_bookings: "Total Bookings", verified: "Verified ✅", pending: "Pending ⏳",
+        search_placeholder: "Search by name, mobile, etc...", scan_qr: "Scan QR",
+        table_id: "ID", table_name: "Name", table_mobile: "Mobile", table_seat: "Seat", table_verified: "Verified", table_actions: "Actions",
+        edit_booking: "Edit Booking", save: "Save", cancel: "Cancel",
+        verified_yes: "✅ Yes", verified_no: "❌ No",
+        delete_confirm: "Are you sure you want to delete this booking?",
+        scanner_title: "QR Code Scanner", scanner_align: "Align QR code within the frame",
+        location_fail: (dist, radius) => `Verification failed: You must be within ${radius}km of the exam center. You are ${dist.toFixed(2)}km away.`,
+        already_verified: (name) => `Already Verified: ${name}`,
+        verified_success: (name) => `Success! Verified ${name}`,
+        unknown_qr: "Unknown QR Code"
+    },
+    hi: {
+        homepage: "होमपेज", new_booking: "नई बुकिंग", my_bookings: "मेरी बुकिंग", admin_dashboard: "एडमिन डैशबोर्ड",
+        welcome_title: "परीक्षा यात्रा में आपका स्वागत है", welcome_subtitle: "सुरक्षित क्यूआर सत्यापन के साथ अपनी परीक्षा के लिए यात्रा बुक करें।",
+        book_now: "अभी बुक करें", from_city: "शहर से", to_district: "गंतव्य जिला", pickup_point: "पिकअप पॉइंट",
+        exam_date: "परीक्षा की तारीख", exam_shift: "परीक्षा की पाली", full_name: "पूरा नाम", mobile_no: "10 अंकों का मोबाइल नंबर",
+        payment_ref: "भुगतान संदर्भ", submit: "सबमिट करें", switch_lang: "Switch to English",
+        pass_title: "परीक्षा यात्रा पास", name: "नाम", from_to: "से → तक", pickup: "पिकअप", date: "तारीख",
+        seat_no: "सीट संख्या", payment: "भुगतान", download_pdf: "पीडीएफ डाउनलोड करें", send_whatsapp: "व्हाट्सएप पर भेजें", close: "बंद करें",
+        my_bookings_info: "आपकी बुकिंग इस ब्राउज़र में सहेजी गई हैं। यदि आप किसी भिन्न डिवाइस का उपयोग करके बुक करते हैं, तो वे यहां दिखाई नहीं देंगी।",
+        no_bookings: "आपकी अभी तक कोई बुकिंग नहीं है।",
+        admin_login: "एडमिन लॉगिन", username: "उपयोगकर्ता नाम", password: "पासवर्ड", login: "लॉग इन करें",
+        total_bookings: "कुल बुकिंग", verified: "सत्यापित ✅", pending: "लंबित ⏳",
+        search_placeholder: "नाम, मोबाइल, आदि से खोजें...", scan_qr: "क्यूआर स्कैन करें",
+        table_id: "आईडी", table_name: "नाम", table_mobile: "मोबाइल", table_seat: "सीट", table_verified: "सत्यापित", table_actions: "कार्रवाई",
+        edit_booking: "बुकिंग संपादित करें", save: "सहेजें", cancel: "रद्द करें",
+        verified_yes: "✅ हाँ", verified_no: "❌ नहीं",
+        delete_confirm: "क्या आप वाकई इस बुकिंग को हटाना चाहते हैं?",
+        scanner_title: "क्यूआर कोड स्कैनर", scanner_align: "क्यूआर कोड को फ्रेम के भीतर रखें",
+        location_fail: (dist, radius) => `सत्यापन विफल: आपको परीक्षा केंद्र के ${radius} किमी के दायरे में होना चाहिए। आप ${dist.toFixed(2)} किमी दूर हैं।`,
+        already_verified: (name) => `पहले से सत्यापित: ${name}`,
+        verified_success: (name) => `सफलता! ${name} को सत्यापित किया गया`,
+        unknown_qr: "अज्ञात क्यूआर कोड"
+    }
+};
+
+const { jsPDF } = window.jspdf;
+
+  // --- UTILITY & CORE FUNCTIONS ---
+  const uid = () => {
+    const randomPart = Math.random().toString(36).substr(2, 6).toUpperCase();
+    const timePart = Date.now().toString().slice(-4);
+    return `ET-${timePart}-${randomPart}`; // Example: ET-5721-AB3XKZ
+  };
+
+  const saveBookings = () => {
+    try {
+      localStorage.setItem("bookings", JSON.stringify(state.bookings));
+    } catch (e) {
+      console.error("Save failed:", e);
+      showToast("⚠️ Unable to save bookings. Storage full?", "error");
+    }
+  };
+
+  const loadBookings = () => {
+    try {
+      state.bookings = JSON.parse(localStorage.getItem("bookings") || "[]");
+    } catch (e) {
+      console.error("Load failed:", e);
+      state.bookings = [];
+    }
+  };
+
+  function showToast(message, type = "info") {
+    const container = document.getElementById("toast-container");
+
+    const toast = document.createElement("div");
+    toast.className = `px-4 py-2 rounded-lg shadow-lg mb-2 flex items-center gap-2 animate-slideIn
+      ${type === "success" ? "bg-green-500 text-white" :
+        type === "error" ? "bg-red-500 text-white" :
+        type === "warning" ? "bg-yellow-400 text-black" :
+        "bg-gray-800 text-white dark:bg-gray-200 dark:text-black"}`;
+
+    // Optional icons
+    const icon = document.createElement("span");
+    icon.innerHTML =
+      type === "success" ? "✅" :
+      type === "error" ? "❌" :
+      type === "warning" ? "⚠️" : "ℹ️";
+
+    const text = document.createElement("span");
+    text.textContent = message;
+
+    toast.appendChild(icon);
+    toast.appendChild(text);
+
+    container.appendChild(toast);
+
+    // Auto remove with fade-out
+    setTimeout(() => {
+      toast.classList.add("animate-fadeOut");
+      setTimeout(() => toast.remove(), 500);
+    }, 4000);
+  }
+function setLanguage(lang) {
+    // Fallback to English if language not found
+    if (!langStrings[lang]) {
+        console.warn(`Language "${lang}" not found. Falling back to English.`);
+        lang = "en";
+    }
+
+    state.lang = lang;
+    localStorage.setItem("preferredLang", lang); // Save user preference
+
+    const t = langStrings[lang];
+
+    // Update all text content & attributes
+    document.querySelectorAll("[data-lang-key]").forEach(el => {
+        const key = el.dataset.langKey;
+        if (t[key]) {
+            if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+                el.placeholder = t[key]; // For input fields
+            } else {
+                el.textContent = t[key];
+            }
+        }
+    });
+
+    // Support for placeholder/title/aria-label translations
+    document.querySelectorAll("[data-lang-attr]").forEach(el => {
+        const attrMap = JSON.parse(el.dataset.langAttr || "{}");
+        Object.keys(attrMap).forEach(attr => {
+            const key = attrMap[attr];
+            if (t[key]) {
+                el.setAttribute(attr, t[key]);
+            }
+        });
+    });
+
+    // Get current page (default Homepage)
+    const currentPage = document.querySelector(".nav-link.active")?.dataset.page || "Homepage";
+
+    // Redraw navigation and current page with new language
+    setupNavigation();
+    navigateTo(currentPage);
+
+    // Dispatch a custom event (other scripts can listen)
+    document.dispatchEvent(new CustomEvent("languageChanged", { detail: { lang } }));
+}
+
+// Auto-load preferred language on startup
+document.addEventListener("DOMContentLoaded", () => {
+    const savedLang = localStorage.getItem("preferredLang") || "en";
+    setLanguage(savedLang);
+});
+
+
+function setupNavigation() {
+  const t = langStrings[state.lang];
+  const items = [
+    { name: "Homepage", key: "homepage", icon: "home" },
+    { name: "New Booking", key: "new_booking", icon: "plus-square" },
+    { name: "My Bookings", key: "my_bookings", icon: "calendar" },
+    { name: "Admin Dashboard", key: "admin_dashboard", icon: "settings" }
+  ];
+  document.getElementById("sidebar-nav").innerHTML = items.map(i => `
+    <a href="#" class="flex items-center gap-2 p-2 rounded nav-link" data-page="${i.name}">
+      <i data-lucide="${i.icon}"></i><span data-lang-key="${i.key}">${t[i.key]}</span>
+    </a>`).join("");
+  document.querySelectorAll(".nav-link").forEach(l => l.onclick = e => { e.preventDefault(); navigateTo(l.dataset.page); });
+}
+
+function navigateTo(page) {
+  document.querySelectorAll(".nav-link").forEach(l => l.classList.remove("active"));
+  const activeLink = document.querySelector(`[data-page="${page}"]`);
+  if(activeLink) {
+    activeLink.classList.add("active");
+    document.getElementById("header-breadcrumb").textContent = activeLink.querySelector('span').textContent;
+  }
+  document.getElementById("main-content").innerHTML = templates[page]();
+  lucide.createIcons();
+  
+  if (page === "New Booking") document.getElementById("booking-form").onsubmit = handleBookingSubmit;
+  if (page === "Admin Dashboard" && !state.isAdmin) document.getElementById("admin-login-form").onsubmit = handleAdminLogin;
+  if (page === "Admin Dashboard" && state.isAdmin) renderAdminTable();
+}
+
+// --- TEMPLATES ---
+const templates = {
+  Homepage: () => {
+    const t = langStrings[state.lang];
+    return `
+    <div class="space-y-8">
+      <!-- Main Welcome Card -->
+      <div class="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl rounded-2xl p-8 text-center">
+        <div class="flex justify-center mb-4">
+          <div class="bg-purple-100 dark:bg-purple-900/50 p-4 rounded-full">
+            <i data-lucide="bus-front" class="w-12 h-12 text-purple-600 dark:text-purple-400"></i>
+          </div>
+        </div>
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white">
+          UPSSSC PAT Exam Travel Service
+        </h1>
+        <p class="mt-3 text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+          Hassle-free, safe, and reliable transport from Chandausi to your exam center.
+        </p>
+      </div>
+
+      <!-- Details Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <!-- Service Purpose Card -->
+        <div class="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 hover:shadow-2xl transition-shadow duration-300">
+          <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-3">Service Purpose</h2>
+          <p class="text-gray-600 dark:text-gray-300">
+            We provide dedicated transport for students appearing for the UPSSSC PAT exam, ensuring you reach your center on time and without stress.
+          </p>
+        </div>
+
+        <!-- Fee Details Card -->
+        <div class="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 hover:shadow-2xl transition-shadow duration-300">
+          <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-3">Fee Details</h2>
+          <p class="text-4xl font-bold text-purple-600 dark:text-purple-400">
+            ₹500 <span class="text-lg font-medium text-gray-500 dark:text-gray-400">/ per student</span>
+          </p>
+          <p class="text-gray-600 dark:text-gray-300 mt-2">
+            Includes round trip and ensures a confirmed seat.
+          </p>
+        </div>
+
+        <!-- Contact & Helpline Card -->
+        <div class="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 hover:shadow-2xl transition-shadow duration-300">
+          <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-4">Contact & Helpline</h2>
+          <div class="space-y-3">
+            <div class="flex items-center gap-3">
+              <i data-lucide="phone" class="w-5 h-5 text-purple-600 dark:text-purple-400"></i>
+              <span class="text-gray-700 dark:text-gray-200">+91 12345 67890</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <i data-lucide="mail" class="w-5 h-5 text-purple-600 dark:text-purple-400"></i>
+              <span class="text-gray-700 dark:text-gray-200">help@examtravel.com</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Call to Action Button -->
+      <div class="text-center pt-4">
+        <button onclick="navigateTo('New Booking')" class="bg-purple-600 text-white font-bold py-4 px-10 rounded-xl shadow-lg hover:bg-purple-700 transition-transform transform hover:scale-105 duration-300 focus:outline-none focus:ring-4 focus:ring-purple-300 dark:focus:ring-purple-800">
+          Book Your Seat Now
+        </button>
+      </div>
+    </div>
+  `},
+  "New Booking": () => {
+    const t = langStrings[state.lang];
+    return `
+    <h2 class="text-2xl font-bold mb-6 text-center text-purple-700">${t.new_booking}</h2>
+    <form id="booking-form" class="bg-white shadow-lg rounded-2xl p-6 space-y-5 max-w-xl mx-auto">
+      
+      <!-- From City -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">${t.from_city}</label>
+        <input type="text" 
+          value="${state.fromCity}" 
+          disabled 
+          class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+      </div>
+
+      <!-- Pickup Point -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">${t.pickup_point}</label>
+        <select id="pickupPoint" 
+          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" required>
+          ${state.pickupPoints.map(p => `<option>${p}</option>`).join("")}
+        </select>
+      </div>
+
+      <!-- To District -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">${t.to_district}</label>
+        <select id="toCity" 
+          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" required>
+          <option value="">${t.to_district}...</option>
+          ${state.toDistricts.map(d => `<option>${d}</option>`).join("")}
+        </select>
+      </div>
+
+      <!-- Exam Date -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">${t.exam_date}</label>
+        <select id="examDate" 
+          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" required>
+          <option value="">${t.exam_date}...</option>
+          <option value="2025-09-06">06/09/2025</option>
+          <option value="2025-09-07">07/09/2025</option>
+        </select>
+      </div>
+
+      <!-- Exam Shift -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Exam Shift</label>
+        <select id="examShift" 
+          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" required>
+          <option value="1st Shift">1st Shift</option>
+          <option value="2nd Shift">2nd Shift</option>
+        </select>
+      </div>
+
+      <!-- Full Name -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">${t.full_name}</label>
+        <input id="fullName" 
+          placeholder="${t.full_name}" 
+          required 
+          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+      </div>
+
+      <!-- Mobile Number -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">${t.mobile_no}</label>
+        <input id="mobile" 
+          placeholder="${t.mobile_no}" 
+          pattern="[0-9]{10}" 
+          maxlength="10" 
+          required 
+          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+      </div>
+
+      <!-- Payment Ref -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">${t.payment_ref}</label>
+        <input id="payment" 
+          placeholder="${t.payment_ref}" 
+          required 
+          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+      </div>
+
+      <!-- Submit Button -->
+      <div class="text-center">
+        <button class="bg-purple-600 hover:bg-purple-700 transition text-white px-6 py-3 rounded-lg font-semibold shadow-md w-full">
+          ${t.submit}
+        </button>
+      </div>
+    </form>
+  `},
+  "My Bookings": () => {
+    const t = langStrings[state.lang];
+    const filteredBookings = state.searchMobile
+    ? state.bookings.filter(b => b.mobile === state.searchMobile)
+    : [];
+
+  return `
+    <h2 class="text-2xl font-bold mb-6 text-center text-purple-700">${t.my_bookings}</h2>
+
+    <!-- Info Card -->
+    <div class="bg-white shadow-md rounded-xl p-5 mb-6">
+      <p class="text-gray-600 text-center">${t.my_bookings_info}</p>
+    </div>
+
+    <!-- Mobile Search -->
+    <div class="max-w-md mx-auto mb-6 flex items-center gap-2">
+      <input id="searchMobile" type="text" maxlength="10" pattern="[0-9]{10}"
+        placeholder="${t.enter_mobile || "Enter Mobile No"}"
+        class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+        value="${state.searchMobile || ""}">
+      <button onclick="searchMyBookings()" 
+        class="bg-purple-600 hover:bg-purple-700 transition text-white px-5 py-2 rounded-lg font-semibold shadow-md">
+        ${t.search || "Search"}
+      </button>
+    </div>
+
+    <!-- Bookings List -->
+    <div class="mt-6 space-y-6">
+      ${
+        state.searchMobile
+          ? (filteredBookings.length > 0
+              ? filteredBookings.map(b => `
+                <div class="bg-white shadow-lg rounded-2xl p-5 border border-gray-100">
+                  
+                  <!-- Passenger Info -->
+                  <div class="flex justify-between items-center mb-3">
+                    <p class="text-lg font-semibold text-purple-700">${b.name}</p>
+                    <span class="text-sm text-gray-500">${b.mobile}</span>
+                  </div>
+
+                  <!-- Journey Info -->
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-gray-700">
+                    <p><span class="font-medium">${t.from}:</span> ${b.from}</p>
+                    <p><span class="font-medium">${t.to}:</span> ${b.to}</p>
+                    <p><span class="font-medium">${t.date}:</span> ${b.examDate} (${b.examShift})</p>
+                    <p><span class="font-medium">${t.pickup}:</span> ${b.pickupPoint}</p>
+                    <p><span class="font-medium">${t.seat_no}:</span> ${b.seatNo || "-"}</p>
+                  </div>
+
+                  <!-- Action -->
+                  <div class="mt-4 text-center">
+                    <button onclick="viewPass('${b.id}')"
+                      class="bg-purple-600 hover:bg-purple-700 transition text-white px-5 py-2 rounded-lg font-semibold shadow-md">
+                      ${t.view_pass || "View Pass"}
+                    </button>
+                  </div>
+                </div>
+              `).join("")
+              : `<div class="bg-white shadow-md rounded-xl p-5 text-center text-gray-600"><p>${t.no_bookings || "No bookings found"}</p></div>`
+            )
+          : `<div class="bg-white shadow-md rounded-xl p-5 text-center text-gray-600"><p>${t.enter_mobile_info || "Enter your mobile number to view bookings."}</p></div>`
+      }
+    </div>
+  `},
+  "Admin Dashboard": () => {
+    const t = langStrings[state.lang];
+    return state.isAdmin ? `
+    <h2 class="text-2xl font-bold mb-6 text-center text-purple-700">${t.admin_dashboard}</h2>
+
+    <!-- Stats -->
+    <div id="stats" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6"></div>
+
+    <!-- Search & QR -->
+    <div class="bg-white shadow-lg rounded-xl p-5 mb-6 flex flex-col md:flex-row gap-4 items-center">
+      <input id="searchBox" 
+        onkeyup="filterBookings()" 
+        placeholder="${t.search_placeholder}" 
+        class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
+      
+      <button id="start-scanner" 
+        onclick="startScanner()" 
+        class="w-full md:w-auto bg-purple-600 hover:bg-purple-700 transition text-white px-5 py-3 rounded-lg flex items-center justify-center gap-2 font-semibold shadow-md">
+        <i data-lucide="scan-line" class="w-5 h-5"></i> ${t.scan_qr}
+      </button>
+    </div>
+
+    <!-- Table -->
+    <div id="admin-table" class="mt-6 overflow-x-auto"></div>
+  ` : `
+    <form id="admin-login-form" class="bg-white shadow-lg rounded-xl p-6 max-w-sm mx-auto space-y-5">
+      <h2 class="text-2xl font-bold text-center text-purple-700">${t.admin_login}</h2>
+      
+      <input id="adminUser" 
+        placeholder="${t.username}" 
+        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" required>
+      
+      <input id="adminPassword" 
+        type="password" 
+        placeholder="${t.password}" 
+        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" required>
+      
+      <button class="bg-purple-600 hover:bg-purple-700 transition text-white px-5 py-3 rounded-lg w-full font-semibold shadow-md">
+        ${t.login}
+      </button>
+    </form>
+  `}
+};
+
+// --- BOOKING & PASS LOGIC ---
+function handleBookingSubmit(e) {
+  e.preventDefault();
+
+  // Input values
+  const examDate = document.getElementById("examDate").value.trim();
+  const examShift = document.getElementById("examShift").value.trim();
+  const fullName = document.getElementById("fullName").value.trim();
+  const mobile = document.getElementById("mobile").value.trim();
+  const toCity = document.getElementById("toCity").value.trim();
+  const pickupPoint = document.getElementById("pickupPoint").value.trim();
+  const payment = document.getElementById("payment").value.trim();
+
+  // 1. Validation checks
+  if (!examDate || !examShift || !fullName || !mobile || !toCity || !pickupPoint || !payment) {
+    return showToast("⚠️ Please fill all fields.", "error");
+  }
+
+  if (!/^[6-9]\d{9}$/.test(mobile)) {
+    return showToast("⚠️ Enter a valid 10-digit mobile number.", "error");
+  }
+
+  // 2. Prevent duplicate booking for same mobile/date/shift
+  const exists = state.bookings.some(
+    b => b.mobile === mobile && b.examDate === examDate && b.examShift === examShift
+  );
+  if (exists) {
+    return showToast("⚠️ You already booked for this date & shift.", "warning");
+  }
+
+  // 3. Auto seat number allocation
+  const shiftKey = `${examDate}-${examShift}`;
+  const seatNo = (state.bookings.filter(b => `${b.examDate}-${b.examShift}` === shiftKey).length + 1);
+
+  // 4. Create booking object
+  const b = {
+    id: uid(),
+    from: state.fromCity,
+    to: toCity,
+    pickupPoint,
+    examDate,
+    examShift,
+    name: fullName,
+    mobile,
+    payment,
+    verified: false,
+    seatNo
+  };
+
+  // 5. Save booking
+  state.bookings.push(b);
+  saveBookings();
+
+  // 6. Show success + reset form
+  showToast("✅ Booking Successful!", "success");
+  document.getElementById("booking-form").reset();
+
+  // 7. Notify admin if logged in
+  if (state.isAdmin) {
+    showToast(`🔔 New booking by ${b.name}`, "info");
+    renderAdminTable();
+  }
+
+  // 8. Redirect to travel pass
+  viewPass(b.id);
+}
+
+
+function viewPass(id) {
+  const b = state.bookings.find(x => x.id === id); if (!b) return;
+  const t = langStrings[state.lang];
+  const html = `
+    <div id="print-area" class="card max-w-md mx-auto">
+      <h2 class="text-xl font-bold text-center mb-2">${t.pass_title}</h2>
+      <p><b>${t.name}:</b> ${b.name}</p><p><b>${t.from_to}:</b> ${b.from} → ${b.to}</p>
+      <p><b>${t.pickup}:</b> ${b.pickupPoint}</p><p><b>${t.date}:</b> ${b.examDate} (${b.examShift})</p>
+      <p><b>${t.seat_no}:</b> ${b.seatNo}</p><p><b>${t.payment}:</b> ${b.payment}</p>
+      <div id="pass-qr" class="my-4 flex justify-center"></div>
+      <div class="flex flex-wrap gap-2 justify-center">
+        <button onclick="downloadPDF('${b.id}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg">${t.download_pdf}</button>
+        <button onclick="sendWhatsApp('${b.id}')" class="bg-green-600 text-white px-4 py-2 rounded-lg">${t.send_whatsapp}</button>
+        <button onclick="hideModal()" class="bg-gray-400 text-white px-4 py-2 rounded-lg">${t.close}</button>
+      </div>
+    </div>`;
+  showModal(html);
+  setTimeout(() => {
+    const el = document.getElementById("pass-qr"); el.innerHTML = "";
+    QRCode.toCanvas(b.id, { width: 150 }, (err, canvas) => { if (!err) el.appendChild(canvas); });
+  }, 100);
+}
+
+async function downloadPDF(id) {
+  const element = document.getElementById("print-area");
+  const canvas = await html2canvas(element);
+  const imgData = canvas.toDataURL("image/png");
+  const doc = new jsPDF();
+  doc.addImage(imgData, "PNG", 10, 10, 180, 0);
+  doc.save(`TravelPass_${id}.pdf`);
+}
+
+function sendWhatsApp(id) {
+    const b = state.bookings.find(x => x.id === id); if (!b) return;
+    const msg = encodeURIComponent(`Hello ${b.name}, here are your Exam Travel Pass details:\n\n*Route:* ${b.from} → ${b.to}\n*Date:* ${b.examDate} (${b.examShift})\n*Seat No:* ${b.seatNo}\n*Booking ID:* ${b.id}\n\nPlease download your pass from the portal.`);
+    window.open(`https://wa.me/91${b.mobile}?text=${msg}`, "_blank");
+}
+
+// --- ADMIN LOGIC ---
+/* ---------- Admin Login ---------- */
+function handleAdminLogin(e) {
+  e.preventDefault();
+  const u = document.getElementById("adminUser").value.trim();
+  const p = document.getElementById("adminPassword").value.trim();
+  const admin = state.admins.find(a => a.username === u && a.password === p);
+  if (admin) {
+    state.isAdmin = true;
+    navigateTo("Admin Dashboard");
+    showToast("Welcome back, Admin!", "success");
+  } else {
+    showToast("Wrong username or password", "error");
+  }
+}
+
+/* ---------- Admin Dashboard Table ---------- */
+function renderAdminTable() {
+  const t = langStrings[state.lang];
+  const total = state.bookings.length;
+  const verified = state.bookings.filter(b => b.verified).length;
+
+  document.getElementById("stats").innerHTML = `
+    <div class="card text-center p-4 shadow-lg rounded-lg bg-white">
+      <h3 class="text-lg font-semibold">${t.total_bookings}</h3>
+      <p class="text-2xl mt-2">${total}</p>
+    </div>
+    <div class="card text-center p-4 shadow-lg rounded-lg bg-white">
+      <h3 class="text-lg font-semibold">${t.verified}</h3>
+      <p class="text-2xl mt-2 text-green-600">${verified}</p>
+    </div>
+    <div class="card text-center p-4 shadow-lg rounded-lg bg-white">
+      <h3 class="text-lg font-semibold">${t.pending}</h3>
+      <p class="text-2xl mt-2 text-red-600">${total - verified}</p>
+    </div>
+  `;
+
+  const container = document.getElementById("admin-table");
+  let grouped = {};
+  state.bookings.forEach(b => {
+    const key = `${b.examDate} - ${b.examShift}`;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(b);
+  });
+
+  container.innerHTML = Object.keys(grouped).sort().map(k => `
+    <h3 class="text-lg font-bold mt-6 mb-3">${k}</h3>
+    <div class="overflow-x-auto bg-white shadow-lg rounded-lg">
+      <table class="w-full text-sm text-left border-collapse">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="p-3">${t.table_id}</th>
+            <th class="p-3">${t.table_name}</th>
+            <th class="p-3">${t.table_mobile}</th>
+            <th class="p-3">${t.table_seat}</th>
+            <th class="p-3">${t.table_verified}</th>
+            <th class="p-3">${t.table_actions}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${grouped[k].map(b => `
+            <tr class="border-t hover:bg-gray-50 transition">
+              <td class="p-2 font-mono text-gray-700">${b.id}</td>
+              <td class="p-2 font-medium">${b.name}</td>
+              <td class="p-2">${b.mobile}</td>
+              <td class="p-2">${b.seatNo}</td>
+              <td class="p-2">
+                <span class="px-2 py-1 rounded-full text-white text-xs ${b.verified ? 'bg-green-600' : 'bg-red-500'}">
+                  ${b.verified ? t.verified_yes : t.verified_no}
+                </span>
+              </td>
+              <td class="p-2 flex flex-wrap gap-1">
+                <button onclick="viewPass('${b.id}')" class="bg-purple-600 hover:bg-purple-700 text-white p-1 rounded" title="View Pass"><i data-lucide="eye"></i></button>
+                <button onclick="sendWhatsApp('${b.id}')" class="bg-green-600 hover:bg-green-700 text-white p-1 rounded" title="Send WhatsApp"><i data-lucide="message-circle"></i></button>
+                <button onclick="editBooking('${b.id}')" class="bg-yellow-500 hover:bg-yellow-600 text-white p-1 rounded" title="Edit Booking"><i data-lucide="edit"></i></button>
+                <button onclick="deleteBooking('${b.id}')" class="bg-red-600 hover:bg-red-700 text-white p-1 rounded" title="Delete Booking"><i data-lucide="trash-2"></i></button>
+              </td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+  `).join("");
+
+  lucide.createIcons();
+}
+
+function editBooking(id) {
+  const b = state.bookings.find(x => x.id === id);
+  if (!b) return;
+  const t = langStrings[state.lang];
+
+  // Generate exam date options with correct selected
+  const dateOptions = Array.from({ length: 5 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const iso = d.toISOString().split("T")[0];
+    const display = d.toLocaleDateString();
+    return `<option value="${iso}" ${b.examDate === iso ? "selected" : ""}>${display}</option>`;
+  }).join("");
+
+  const html = `
+    <form id="edit-form" class="card space-y-3 p-4 shadow-lg rounded-lg bg-white max-w-md mx-auto">
+      <h2 class="text-xl font-bold mb-2">${t.edit_booking}</h2>
+      
+      <div>
+        <label class="block font-medium mb-1">${t.full_name}</label>
+        <input id="editName" value="${b.name}" class="w-full p-2 border rounded" placeholder="${t.full_name}">
+      </div>
+
+      <div>
+        <label class="block font-medium mb-1">${t.mobile_no}</label>
+        <input id="editMobile" value="${b.mobile}" class="w-full p-2 border rounded" placeholder="${t.mobile_no}">
+      </div>
+
+      <div>
+        <label class="block font-medium mb-1">${t.pickup_point}</label>
+        <select id="editPickup" class="w-full p-2 border rounded">
+          ${state.pickupPoints.map(p=>`<option ${p===b.pickupPoint?"selected":""}>${p}</option>`).join("")}
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-medium mb-1">${t.to_district}</label>
+        <select id="editTo" class="w-full p-2 border rounded">
+          ${state.toDistricts.map(d=>`<option ${d===b.to?"selected":""}>${d}</option>`).join("")}
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-medium mb-1">${t.exam_date}</label>
+        <select id="editDate" class="w-full p-2 border rounded">${dateOptions}</select>
+      </div>
+
+      <div>
+        <label class="block font-medium mb-1">Exam Shift</label>
+        <select id="editShift" class="w-full p-2 border rounded">
+          <option value="1st Shift" ${b.examShift==="1st Shift"?"selected":""}>1st Shift</option>
+          <option value="2nd Shift" ${b.examShift==="2nd Shift"?"selected":""}>2nd Shift</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-medium mb-1">${t.payment_ref}</label>
+        <input id="editPayment" value="${b.payment}" class="w-full p-2 border rounded" placeholder="${t.payment_ref}">
+      </div>
+
+      <div class="flex gap-2 justify-end">
+        <button class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg">${t.save}</button>
+        <button type="button" onclick="hideModal()" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg">${t.cancel}</button>
+      </div>
+    </form>
+  `;
+
+  showModal(html);
+
+  document.getElementById("edit-form").onsubmit = e => {
+    e.preventDefault();
+    Object.assign(b, {
+      name: document.getElementById("editName").value,
+      mobile: document.getElementById("editMobile").value,
+      pickupPoint: document.getElementById("editPickup").value,
+      to: document.getElementById("editTo").value,
+      examDate: document.getElementById("editDate").value,
+      examShift: document.getElementById("editShift").value,
+      payment: document.getElementById("editPayment").value
+    });
+    saveBookings();
+    hideModal();
+    renderAdminTable();
+    showToast("Booking updated successfully!", "success");
+  };
+}
+
+
+/* ---------- Delete Booking ---------- */
+function deleteBooking(id) {
+  const t = langStrings[state.lang];
+  if (confirm(t.delete_confirm)) {
+    state.bookings = state.bookings.filter(x => x.id !== id);
+    saveBookings();
+    renderAdminTable();
+    showToast("Booking deleted.", "info");
+  }
+}
+
+/* ---------- Live Filter ---------- */
+function filterBookings() {
+  const q = document.getElementById("searchBox").value.toLowerCase();
+  document.querySelectorAll("#admin-table tbody tr").forEach(row => {
+    row.style.display = row.innerText.toLowerCase().includes(q) ? "" : "none";
+  });
+}
+
+function searchMyBookings() {
+  const input = document.getElementById("searchMobile");
+  const mobile = input?.value.trim();
+
+  if (!mobile) {
+    showToast("Please enter mobile number", "error");
+    return;
+  }
+
+  if (!/^\d{10}$/.test(mobile)) {
+    showToast("Enter a valid 10-digit mobile number", "error");
+    return;
+  }
+
+  state.searchMobile = mobile;
+  render(); // re-render the UI with filtered bookings
+}
+
+
+let animationFrameId;
+
+function startScanner() {
+    showToast("Starting QR scanner...", "info");
+    launchCameraScanner();
+}
+
+function launchCameraScanner() {
+    const t = langStrings[state.lang];
+    const scannerHtml = `
+        <div class="card p-4">
+            <h2 class="text-xl font-bold mb-2 text-center">${t.scanner_title}</h2>
+            <div id="scanner-container">
+                <video id="scanner-video" playsinline></video>
+                <canvas id="scanner-canvas"></canvas>
+                <div id="scanner-laser"></div>
+            </div>
+            <p id="scanner-feedback" class="text-center mt-2 font-semibold">${t.scanner_align}</p>
+            <button onclick="stopScanner()" class="mt-2 w-full bg-gray-500 text-white px-4 py-2 rounded-lg">${t.cancel}</button>
+        </div>`;
+    showModal(scannerHtml);
+
+    const video = document.getElementById("scanner-video");
+    const canvasElement = document.getElementById("scanner-canvas");
+    const canvas = canvasElement.getContext("2d");
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        .then(stream => {
+            window.currentStream = stream;
+            video.srcObject = stream;
+            video.onloadedmetadata = () => {
+                video.play();
+                animationFrameId = requestAnimationFrame(tick);
+            };
+
+            function tick() {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    canvasElement.height = video.videoHeight;
+                    canvasElement.width = video.videoWidth;
+                    canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+
+                    const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+
+                    if (code) {
+                        drawBoundingBox(code.location);
+                        handleQrCode(code.data);
+                        return; // Stop the loop after scan
+                    }
+                }
+                animationFrameId = requestAnimationFrame(tick);
+            }
+        })
+        .catch(err => {
+            console.error("Camera Error:", err);
+            showToast("Could not access camera.", "error");
+            hideModal();
+        });
+}
+
+function drawBoundingBox(location) {
+    const canvas = document.getElementById("scanner-canvas").getContext("2d");
+    canvas.beginPath();
+    canvas.moveTo(location.topLeftCorner.x, location.topLeftCorner.y);
+    canvas.lineTo(location.topRightCorner.x, location.topRightCorner.y);
+    canvas.lineTo(location.bottomRightCorner.x, location.bottomRightCorner.y);
+    canvas.lineTo(location.bottomLeftCorner.x, location.bottomLeftCorner.y);
+    canvas.closePath();
+    canvas.lineWidth = 4;
+    canvas.strokeStyle = "#00FF00";
+    canvas.stroke();
+}
+
+function handleQrCode(data) {
+    stopScanner(false);
+    const feedback = document.getElementById("scanner-feedback");
+    const t = langStrings[state.lang];
+
+    const booking = state.bookings.find(b => b.id === data);
+    if (booking) {
+        if (booking.verified) {
+            feedback.textContent = t.already_verified(booking.name);
+            showToast(t.already_verified(booking.name), 'info');
+        } else {
+            booking.verified = true;
+            saveBookings();
+            feedback.textContent = t.verified_success(booking.name);
+            showToast(t.verified_success(booking.name), 'success');
+            renderAdminTable(); // Admin dashboard auto-refresh
+        }
+    } else {
+        feedback.textContent = t.unknown_qr;
+        showToast("Unknown Person / Invalid QR Code", 'error');
+    }
+
+    setTimeout(hideModal, 2500);
+}
+
+function stopScanner(closeModal = true) {
+    if(animationFrameId) cancelAnimationFrame(animationFrameId);
+    if (window.currentStream) {
+        window.currentStream.getTracks().forEach(track => track.stop());
+        window.currentStream = null;
+    }
+    if(closeModal) hideModal();
+}
+
+// Modal helpers
+function showModal(html) {
+    const m = document.getElementById("modal-container");
+    m.innerHTML = `<div class="bg-white p-0 rounded-lg max-w-lg w-full">${html}</div>`;
+    m.classList.remove("hidden");
+    m.classList.add("flex");
+}
+
+function hideModal() {
+    stopScanner(false);
+    document.getElementById("modal-container").classList.add("hidden");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    loadBookings();
+    document.getElementById('lang-switcher').onclick = () => {
+        const newLang = state.lang === 'en' ? 'hi' : 'en';
+        setLanguage(newLang);
+    };
+    setLanguage('en'); // Initialize with English
+});
+
+</script>
+</body>
+</html>
